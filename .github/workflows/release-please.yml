@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# The set release-please-action's README requires.
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # Maintains a rolling release PR from conventional commits. Merging it bumps
+  # package.json, writes CHANGELOG.md, tags, and creates the GitHub Release --
+  # at which point `release_created` flips true for exactly that one run.
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # The release exists but is empty until this attaches the zip. Recipients install
+  # from that artifact, so it must be built with the real signing key: an unpinned
+  # build gets a path-derived extension ID and would reset everyone's settings.
+  package:
+    needs: release-please
+    if: needs.release-please.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are pinned by SHA, not tag: a tag is mutable, and these jobs sit next to
+      # the extension's signing key. Dependabot keeps the pins current.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The release commit, not the branch head -- so the version in the zip is
+          # the version being released even if main has moved on.
+          ref: ${{ needs.release-please.outputs.tag }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+
+      - name: Build and package
+        env:
+          EXTENSION_KEY_PEM: ${{ secrets.EXTENSION_KEY_PEM }}
+        run: |
+          if [ -z "$EXTENSION_KEY_PEM" ]; then
+            echo "::error::EXTENSION_KEY_PEM is not set. Add the contents of key.pem as a repository SECRET (not a variable) -- see docs/RELEASING.md."
+            exit 1
+          fi
+          # Written to disk because wxt.config.ts reads ./key.pem, and removed on the
+          # way out so no later step can pick it up or upload it.
+          printf '%s\n' "$EXTENSION_KEY_PEM" > key.pem
+          trap 'rm -f key.pem' EXIT
+          npm run id        # logs the extension ID, so a wrong key is visible here
+          npm run zip
+
+      - name: Attach the zip to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: gh release upload "$TAG" .output/*-chrome.zip --clobber

@@ -1,0 +1,44 @@
+{
+  "name": "gitlab-review-assistant",
+  "description": "Marks templated files as Viewed in GitLab merge requests",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "icons": "node scripts/build-icons.mjs",
+    "id": "node scripts/print-extension-id.mjs",
+    "prezip": "node scripts/require-key.mjs",
+    "zip": "wxt zip",
+    "compile": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run compile && npm run lint && npm run format:check && npm run test:coverage",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/picomatch": "^4.0.3",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^9.39.0",
+    "globals": "^14.0.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10",
+    "web-ext": "^10.5.0",
+    "wxt": "^0.21.3"
+  }
+}

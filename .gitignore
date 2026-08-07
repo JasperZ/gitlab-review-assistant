@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.output
+stats.html
+stats-*.json
+.wxt
+web-ext.config.ts
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Extension signing key. wxt.config.ts derives manifest.key from it at build time to pin
+# the extension ID, so no key material is committed -- public or private. This is the only
+# copy of that identity: losing it forces a new key, hence a new ID, which resets every
+# user's stored settings. Back it up outside the repo. See docs/RELEASING.md.
+key.pem
+*.pem
+
+# Coverage output
+coverage

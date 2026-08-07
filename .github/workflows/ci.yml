@@ -1,0 +1,33 @@
+name: CI
+
+# The release workflow also runs these checks, but only after release-please has already
+# tagged and published. Gating the pull request is what stops a broken commit reaching a
+# release in the first place.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Typecheck, lint, format check, tests and coverage thresholds.
+      - run: npm run check
+      # Builds without key.pem, so it warns about the unpinned ID and carries on. Proves
+      # the bundle compiles; the signed artifact is the release workflow's job.
+      - run: npm run build

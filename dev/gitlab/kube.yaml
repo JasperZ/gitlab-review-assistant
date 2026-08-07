@@ -1,0 +1,138 @@
+# Local GitLab 18.8 test instance for the extension.
+#
+#   podman kube play           dev/gitlab/kube.yaml   # create + start
+#   podman kube play --replace dev/gitlab/kube.yaml   # re-apply after editing
+#   podman kube down           dev/gitlab/kube.yaml   # stop + remove, keep volumes
+#
+# Prerequisite that cannot live in this file: the podman machine needs ~12 GiB.
+# It is a property of the VM, not the workload. See ./README.md.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-config
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-logs
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-env
+data:
+  # Evaluated as Ruby by the image's own /etc/gitlab/gitlab.rb on every boot.
+  # It is never written into the container -- it is re-read from here each start,
+  # so editing this block plus `--replace` is the way to change configuration.
+  GITLAB_OMNIBUS_CONFIG: |
+    external_url 'http://localhost:8929';
+    gitlab_rails['gitlab_shell_ssh_port'] = 2224;
+
+    # Throwaway instance. Applied only on the first reconfigure of a fresh database;
+    # changing it later has no effect (use `gitlab-rake "gitlab:password:reset[root]"`).
+    gitlab_rails['initial_root_password'] = 'CorrectHorseBattery9';
+
+    # Monitoring off. The master switch does NOT cover the two exporters below it.
+    prometheus_monitoring['enable'] = false;
+    puma['exporter_enabled'] = false;
+    sidekiq['metrics_enabled'] = false;
+
+    # Services this instance never uses.
+    registry['enable'] = false;
+    gitlab_kas['enable'] = false;
+    gitlab_pages['enable'] = false;
+    letsencrypt['enable'] = false;
+
+    # Single-user sizing. worker_processes = 0 runs Puma in single-process mode,
+    # which saves 100-400 MB. If the UI starts stalling, raise it to 2.
+    puma['worker_processes'] = 0;
+    sidekiq['concurrency'] = 5;
+
+    # Return freed pages to the OS faster (GitLab's memory-constrained guidance).
+    gitlab_rails['env'] = { 'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000' };
+    gitaly['env'] = { 'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000' };
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gitlab
+spec:
+  restartPolicy: OnFailure
+  hostname: gitlab
+  containers:
+    - name: gitlab
+      # Pinned to the newest and final 18.8 patch. 18.8 is EOL, which is desirable
+      # here: the DOM and localStorage contracts the extension depends on cannot
+      # shift underneath us. Note 18.8.8 was never published -- the numbering skips it.
+      # Native linux/arm64; GitLab has shipped multi-arch images since 18.1.0.
+      image: docker.io/gitlab/gitlab-ce:18.8.11-ce.0
+      envFrom:
+        - configMapRef:
+            name: gitlab-env
+      ports:
+        # Host 22 belongs to macOS, so GitLab's SSH lands on 2224. This must agree
+        # with gitlab_shell_ssh_port above or the "Clone with SSH" button renders a
+        # broken URL.
+        - containerPort: 8929
+          hostPort: 8929
+        - containerPort: 22
+          hostPort: 2224
+      resources:
+        limits:
+          # Cap the container so a runaway Sidekiq cannot OOM the whole VM.
+          memory: '10Gi'
+      volumeMounts:
+        - name: gitlab-config
+          mountPath: /etc/gitlab
+        - name: gitlab-logs
+          mountPath: /var/log/gitlab
+        - name: gitlab-data
+          mountPath: /var/opt/gitlab
+        - name: shm
+          mountPath: /dev/shm
+      # No livenessProbe on purpose: `podman kube play` does not support
+      # startupProbe, and first boot takes 4-8 minutes. A liveness probe without a
+      # startup grace period would restart-loop the container forever.
+  volumes:
+    # claimName IS the podman named volume name. Named volumes live inside the VM's
+    # filesystem -- deliberately not hostPath, which would traverse macOS virtiofs.
+    # GitLab's reconfigure runs `chown -R gitlab-psql ...`, and virtiofs ownership
+    # semantics are where Postgres and Gitaly die on macOS.
+    - name: gitlab-config
+      persistentVolumeClaim:
+        claimName: gitlab-config
+    - name: gitlab-logs
+      persistentVolumeClaim:
+        claimName: gitlab-logs
+    - name: gitlab-data
+      persistentVolumeClaim:
+        claimName: gitlab-data
+    # There is no kube-YAML equivalent of `--shm-size` and no podman annotation for
+    # it. Podman defaults /dev/shm to 64 MB; GitLab recommends 256 MB. Podman
+    # documents emptyDir as an anonymous *volume* and says nothing about honouring
+    # `medium: Memory`, so this may not become a tmpfs -- see README.md.
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 256Mi

@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # Actions are pinned by commit SHA, which is what makes them tamper-proof and also
+  # what makes them invisible to a human reading the diff. Dependabot is the thing that
+  # keeps those pins current; without it, pinning just means running stale actions.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional Commits, so release-please files these correctly. Production deps
+      # land under Bug Fixes; devDependency bumps stay out of the changelog.
+      prefix: fix
+      prefix-development: chore
+      include: scope
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch

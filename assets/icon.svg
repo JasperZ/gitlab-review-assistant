@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!--
+    Source of truth for public/icon/*.png. Regenerate with `npm run icons`.
+
+    A checkmark drawn as a commit path: one continuous stroke with commit nodes at both
+    ends and the vertex. The two motifs share a single shape rather than sitting beside
+    each other, which is what makes it survive 16px - at that size it simply reads as a
+    good checkmark, and the graph only becomes legible from about 48px up.
+
+    Design constraints, both learned by rendering alternatives and looking at them:
+
+    1. 16px legibility rules everything. A branch glyph with a separate check badge is a
+       better mark at 128px and turns to mush at 16px, because two elements cannot be
+       resolved in 256 pixels.
+    2. Do NOT punch rings through all three nodes. It looks tidier at 128px but breaks the
+       stroke's continuity, and the check stops reading as a check when small. Only the
+       two end nodes are hollow; the vertex stays solid so the corner holds.
+    3. Solid badge, not a bare glyph: the Chrome toolbar can be light or dark, and a
+       monochrome mark on transparency disappears against one of them.
+
+    Blue is #1f75cb, the same accent used by the options page and the in-page overlay.
+    Deliberately not GitLab's tanuki or wordmark - those are their trademarks, and a
+    generic commit-graph motif says the same thing.
+  -->
+  <rect width="128" height="128" rx="28" fill="#1f75cb"/>
+  <path d="M34 66 L56 88 L96 42"
+        fill="none" stroke="#ffffff" stroke-width="13"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="34" cy="66" r="11" fill="#ffffff"/>
+  <circle cx="56" cy="88" r="11" fill="#ffffff"/>
+  <circle cx="96" cy="42" r="11" fill="#ffffff"/>
+  <circle cx="34" cy="66" r="4.5" fill="#1f75cb"/>
+  <circle cx="96" cy="42" r="4.5" fill="#1f75cb"/>
+</svg>
