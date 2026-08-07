@@ -28,8 +28,11 @@ and no version bump**. That is the only way to get this wrong.
 
 ### Below 1.0.0
 
-While [`.release-please-manifest.json`](../.release-please-manifest.json) still holds the
-initial version, nothing has been released yet and the first `feat:` cuts the first minor.
+While [`.release-please-manifest.json`](../.release-please-manifest.json) holds `0.0.0`,
+nothing has been released yet and the first release is whatever `initial-version` in
+[`release-please-config.json`](../release-please-config.json) says. That override matters:
+release-please's initial-release path ignores the commit types entirely and would
+otherwise default straight to **1.0.0**.
 
 One default worth knowing while the version stays in 0.x: a breaking change bumps to
 **1.0.0**, not 0.2.0. release-please treats a pre-major version like any other unless told

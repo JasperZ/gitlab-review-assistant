@@ -28,3 +28,10 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # TypeScript majors routinely run ahead of what typescript-eslint's peer range
+      # accepts (TS 7 landed while it still capped at <6.1.0), so every such PR just
+      # fails `npm ci`. Bump TS majors by hand once the toolchain supports them.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major

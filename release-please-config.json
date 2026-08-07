@@ -17,7 +17,8 @@
   ],
   "packages": {
     ".": {
-      "package-name": "gitlab-review-assistant"
+      "package-name": "gitlab-review-assistant",
+      "initial-version": "0.1.0"
     }
   }
 }
