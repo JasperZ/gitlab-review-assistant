@@ -23,7 +23,7 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "picomatch": "^4.0.5"
+    "picomatch": "^4.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
